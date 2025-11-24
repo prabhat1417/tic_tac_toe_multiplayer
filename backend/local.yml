@@ -1,0 +1,3 @@
+runtime:
+  path: "/nakama/data/modules"
+  js_entrypoint: "index.js"
