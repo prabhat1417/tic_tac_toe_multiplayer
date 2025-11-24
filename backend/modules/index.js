@@ -4,6 +4,20 @@
 function InitModule(ctx, logger, nk, initializer) {
     logger.info("Tic-Tac-Toe JS Module Loaded");
 
+    try {
+        nk.leaderboardCreate(
+            "tictactoe_wins",
+            true, // authoritative
+            "desc",    // sortOrder: 1 = DESC
+            "incr",    // operator: INCREMENT
+            "",   // empty string = NEVER reset
+            {}    // metadata must be an object
+        );
+        logger.info("Leaderboard created (or already exists).");
+    } catch (error) {
+        logger.error("Leaderboard creation failed: " + error);
+    }
+
     // register authoritative match
     initializer.registerMatch("tictactoe", {
         matchInit,
@@ -143,10 +157,16 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
                         state.winner = win;
                         state.finished = true;
                         state.finishTick = tick + 10; // End in 10 secs
+
+                        // Update Stats
+                        updateStats(nk, logger, state.players, win);
                     } else if (!state.board.includes(null)) {
                         state.winner = 'draw';
                         state.finished = true;
                         state.finishTick = tick + 10;
+
+                        // Update Stats (Draw)
+                        updateStats(nk, logger, state.players, 'draw');
                     } else {
                         // Switch turn
                         state.turn = state.turn === 'X' ? 'O' : 'X';
@@ -157,7 +177,8 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
                         type: "update",
                         board: state.board,
                         turn: state.turn,
-                        winner: state.winner
+                        winner: state.winner,
+                        players: state.players // Send players so frontend has names
                     }));
                 }
             }
@@ -183,6 +204,93 @@ function checkWin(board) {
         }
     }
     return null;
+}
+
+function updateStats(nk, logger, players, result) {
+    try {
+        const userIds = Object.keys(players);
+
+        userIds.forEach(uid => {
+            const player = players[uid];
+            let outcome = 'loss';
+            if (result === 'draw') outcome = 'draw';
+            else if (result === player.mark) outcome = 'win';
+
+            logger.info(`Updating stats for ${uid} (${player.username}): ${outcome}`);
+
+            // Read existing stats
+            const storageIds = [{
+                collection: "user_stats",
+                key: "tictactoe",
+                userId: uid
+            }];
+            const objects = nk.storageRead(storageIds);
+
+            let stats = { wins: 0, losses: 0, draws: 0, played: 0 };
+            let version = "";
+
+            if (objects.length > 0) {
+                stats = objects[0].value;
+                version = objects[0].version;
+            }
+
+            // Update
+            stats.played++;
+            if (outcome === 'win') stats.wins++;
+            else if (outcome === 'loss') stats.losses++;
+            else stats.draws++;
+
+            // Write back
+            try {
+                nk.storageWrite([{
+                    collection: "user_stats",
+                    key: "tictactoe",
+                    userId: uid,
+                    value: stats,
+                    permissionRead: 1, // Public Read
+                    permissionWrite: 0, // Owner Write (but server can always write)
+                    version: version
+                }]);
+            } catch (e) {
+                logger.error("Storage write failed: " + e);
+            }
+
+            // Update Leaderboard
+            const scoreDelta = outcome === 'win' ? 1 : 0;
+
+            // Ensure we have the latest username (in case player object is stale)
+            let username = player.username;
+            if (!username || username === "Unknown") {
+                try {
+                    const account = nk.accountGetId(uid);
+                    username = account.user.username;
+                } catch (e) {
+                    logger.warn("Could not fetch account for username: " + e);
+                    username = "Unknown";
+                }
+            }
+
+            logger.info(`Writing to leaderboard for ${username}: delta=${scoreDelta} stats=${JSON.stringify(stats)}`);
+
+            try {
+                nk.leaderboardRecordWrite(
+                    "tictactoe_wins",
+                    uid,
+                    username,
+                    scoreDelta,
+                    0,
+                    stats // Metadata
+                );
+                logger.info("Leaderboard write successful.");
+            } catch (e) {
+                logger.error("Leaderboard write failed: " + e);
+            }
+        });
+
+        logger.info("Stats update sequence completed.");
+    } catch (e) {
+        logger.error("Error updating stats: " + e);
+    }
 }
 
 // ======================================================

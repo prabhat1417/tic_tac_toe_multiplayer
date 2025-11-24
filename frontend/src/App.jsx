@@ -1,154 +1,201 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { client, getSession } from './nakama';
+import Login from './components/Login';
+import MainMenu from './components/MainMenu';
+import Lobby from './components/Lobby';
 import Game from './components/Game';
-import './App.css';
+import Leaderboard from './components/Leaderboard';
+import './App.css'; // We might remove this if index.css covers it, but keeping for safety
 
 function App() {
+  const [screen, setScreen] = useState('login'); // login, menu, lobby-host, lobby-join, game, leaderboard
   const [session, setSession] = useState(null);
+  const [username, setUsername] = useState('');
+
   const [matchId, setMatchId] = useState(null);
   const [socket, setSocket] = useState(null);
   const [board, setBoard] = useState(Array(9).fill(null));
+  const [players, setPlayers] = useState({});
   const [myTurn, setMyTurn] = useState(false);
-  const [playerMark, setPlayerMark] = useState(null); // 'X' or 'O'
+  const [playerMark, setPlayerMark] = useState(null);
   const [winner, setWinner] = useState(null);
-  const [statusMsg, setStatusMsg] = useState("Initializing...");
 
-  // Use refs for values needed in callbacks to avoid stale closures
   const matchIdRef = useRef(null);
   const playerMarkRef = useRef(null);
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        setStatusMsg("Connecting to Nakama...");
-        const s = await getSession();
-        setSession(s);
+  // Login Handler
+  const handleLogin = async (user) => {
+    try {
+      const s = await getSession(user);
+      setSession(s);
+      setUsername(user);
 
-        const socket = client.createSocket(false, false);
-        await socket.connect(s, true);
-        setSocket(socket);
-        setStatusMsg("Connected. Ready to play.");
+      // Connect Socket
+      const socket = client.createSocket(false, false);
+      await socket.connect(s, true);
+      setSocket(socket);
 
-        socket.onmatchdata = (matchState) => {
-          const content = JSON.parse(new TextDecoder().decode(matchState.data));
-          console.log("Match Data:", content);
+      // Setup Listeners
+      socket.onmatchdata = (matchState) => {
+        const content = JSON.parse(new TextDecoder().decode(matchState.data));
 
-          if (content.type === "update") {
-            setBoard(content.board);
-            setWinner(content.winner);
+        if (content.type === "update") {
+          setBoard(content.board);
+          setWinner(content.winner);
+          if (content.players) setPlayers(content.players);
 
-            // Determine if it's my turn
-            // We need to know OUR mark. The backend sends 'players' map.
-            // We can find ourselves in it.
-            if (content.players && content.players[s.user_id]) {
-              const myPlayer = content.players[s.user_id];
-              setPlayerMark(myPlayer.mark);
-              playerMarkRef.current = myPlayer.mark;
-              setMyTurn(content.turn === myPlayer.mark);
-            } else {
-              // If players not sent every time, we rely on state. 
-              // But backend sends it on Join, so we should have it.
-              // For simple updates, we might just get board/turn.
-              // We use the ref to get the current playerMark
-              if (playerMarkRef.current) {
-                setMyTurn(content.turn === playerMarkRef.current);
-              }
+          if (content.players && content.players[s.user_id]) {
+            const myPlayer = content.players[s.user_id];
+            setPlayerMark(myPlayer.mark);
+            playerMarkRef.current = myPlayer.mark;
+            setMyTurn(content.turn === myPlayer.mark);
+          } else {
+            if (playerMarkRef.current) {
+              setMyTurn(content.turn === playerMarkRef.current);
             }
           }
-        };
+        }
+      };
 
-        console.log("Connected to Nakama");
-      } catch (err) {
-        console.error("Error connecting:", err);
-        setStatusMsg("Error connecting to server.");
-      }
-    };
-    init();
-  }, []);
+      setScreen('menu');
+    } catch (err) {
+      console.error("Login failed:", err);
+      alert("Login failed. Check console.");
+    }
+  };
 
-  const findMatch = async () => {
+  // Matchmaking / Hosting
+  const handleHost = async () => {
     if (!socket) return;
-    setStatusMsg("Creating match...");
     try {
-      // 1. Create match via RPC
       const rpcRes = await client.rpc(session, "create_match", {});
       const payload = rpcRes.payload;
       const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
       const mId = data.matchId;
 
-      // 2. Join the match
-      setStatusMsg("Joining match...");
       const match = await socket.joinMatch(mId);
       setMatchId(match.match_id);
       matchIdRef.current = match.match_id;
-      setStatusMsg("Match joined! Waiting for opponent...");
 
-      console.log("Joined match:", match);
+      // Reset Game State
+      setBoard(Array(9).fill(null));
+      setWinner(null);
+      setPlayerMark(null);
+      playerMarkRef.current = null;
+
+      setScreen('lobby-host');
+
+      // In a real app, we'd wait for a player join event here to switch to 'game'
+      // But our backend sends an update immediately on join.
+      // Let's listen for presence join? Or just wait for the first update with 2 players.
+      // For now, we can just switch to game screen when we get a match update that implies game start?
+      // Or just stay in lobby until opponent joins.
+      // Let's add a presence listener.
+
     } catch (err) {
-      console.error("Error finding match:", err);
-      setStatusMsg("Failed to create/join match.");
+      console.error("Host failed:", err);
+    }
+  };
+
+  const handleJoinMatch = async (code) => {
+    if (!socket) return;
+    try {
+      const match = await socket.joinMatch(code);
+      setMatchId(match.match_id);
+      matchIdRef.current = match.match_id;
+
+      // Reset Game State
+      setBoard(Array(9).fill(null));
+      setWinner(null);
+      setPlayerMark(null);
+      playerMarkRef.current = null;
+
+      setScreen('game');
+    } catch (err) {
+      console.error("Join failed:", err);
+      alert("Could not join match: " + err.message);
     }
   };
 
   const handleMove = (index) => {
     if (!socket || !matchId) return;
-
-    // Send move to backend
     const data = { position: index };
-    // OpCode 1 = Move
     socket.sendMatchState(matchId, 1, JSON.stringify(data));
   };
 
-  if (!session) return <div>{statusMsg}</div>;
+  const handleReset = () => {
+    // Leave match and go back to menu
+    if (socket && matchId) {
+      socket.leaveMatch(matchId);
+    }
+    setMatchId(null);
+    setScreen('menu');
+  };
 
+  // Effect to auto-switch from lobby to game when player joins
+  // We can detect this if we receive a match state update that shows 2 players
+  // Or use match presence.
+  useEffect(() => {
+    if (socket) {
+      socket.onmatchpresence = (presence) => {
+        console.log("Presence update:", presence);
+        // If we are hosting and someone joins, switch to game
+        if (screen === 'lobby-host' && presence.joins && presence.joins.length > 0) {
+          setScreen('game');
+        }
+      };
+    }
+  }, [socket, screen]);
+
+
+  // Render
   return (
     <div className="App">
-      <h1>Nakama Tic-Tac-Toe</h1>
-      {!matchId ? (
-        <div className="menu">
-          <p>{statusMsg}</p>
-          <button onClick={findMatch} className="start-btn">Create Match</button>
-          <p className="hint">To test multiplayer, open this page in a second tab/window and join the same match ID (Logic for joining existing match needs to be added or just copy-paste ID).</p>
-          {/* Simple Join by ID input for testing */}
-          <JoinById socket={socket} setMatchId={setMatchId} setStatusMsg={setStatusMsg} />
-        </div>
-      ) : (
+      {screen === 'login' && <Login onLogin={handleLogin} />}
+
+      {screen === 'menu' && (
+        <MainMenu
+          onHost={handleHost}
+          onJoin={() => setScreen('lobby-join')}
+          onLeaderboard={() => setScreen('leaderboard')}
+        />
+      )}
+
+      {screen === 'lobby-host' && (
+        <Lobby
+          mode="host"
+          matchId={matchId}
+          onCancel={() => setScreen('menu')}
+        />
+      )}
+
+      {screen === 'lobby-join' && (
+        <Lobby
+          mode="join"
+          onJoinMatch={handleJoinMatch}
+          onCancel={() => setScreen('menu')}
+        />
+      )}
+
+      {screen === 'leaderboard' && (
+        <Leaderboard
+          session={session}
+          onBack={() => setScreen('menu')}
+        />
+      )}
+
+      {screen === 'game' && (
         <Game
           board={board}
+          players={players}
+          myId={session?.user_id}
           onMove={handleMove}
           myTurn={myTurn}
           playerMark={playerMark}
           winner={winner}
+          onReset={handleReset}
         />
       )}
-    </div>
-  );
-}
-
-// Helper component to join by ID
-function JoinById({ socket, setMatchId, setStatusMsg }) {
-  const [id, setId] = useState("");
-  const join = async () => {
-    if (!id) return;
-    try {
-      setStatusMsg("Joining specific match...");
-      const match = await socket.joinMatch(id);
-      setMatchId(match.match_id);
-      setStatusMsg("Joined!");
-    } catch (e) {
-      console.error(e);
-      setStatusMsg("Failed to join: " + e.message);
-    }
-  };
-  return (
-    <div style={{ marginTop: 20 }}>
-      <input
-        placeholder="Or Enter Match ID"
-        value={id}
-        onChange={e => setId(e.target.value)}
-        style={{ padding: 10, marginRight: 10 }}
-      />
-      <button onClick={join} style={{ padding: 10 }}>Join</button>
     </div>
   );
 }

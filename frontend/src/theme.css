@@ -1,0 +1,94 @@
+:root {
+    --bg-color: #050505;
+    --text-color: #ffffff;
+    --neon-pink: #ff0055;
+    --neon-green: #00ff41;
+    --neon-blue: #00f3ff;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --font-main: 'Orbitron', 'Roboto', sans-serif;
+    /* We might need to import a font */
+
+    --glow-pink: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink);
+    --glow-green: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-main);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Utility classes for neon text */
+.text-neon-pink {
+    color: var(--neon-pink);
+    text-shadow: var(--glow-pink);
+}
+
+.text-neon-green {
+    color: var(--neon-green);
+    text-shadow: var(--glow-green);
+}
+
+/* Button Styles */
+.btn-cyber {
+    background: transparent;
+    border: 2px solid var(--neon-pink);
+    color: var(--neon-pink);
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    font-family: var(--font-main);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--neon-pink) inset, 0 0 10px var(--neon-pink);
+    transition: all 0.3s ease;
+    border-radius: 5px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.btn-cyber:hover {
+    background: var(--neon-pink);
+    color: #fff;
+    box-shadow: 0 0 20px var(--neon-pink) inset, 0 0 40px var(--neon-pink);
+}
+
+.btn-cyber.green {
+    border-color: var(--neon-green);
+    color: var(--neon-green);
+    box-shadow: 0 0 10px var(--neon-green) inset, 0 0 10px var(--neon-green);
+}
+
+.btn-cyber.green:hover {
+    background: var(--neon-green);
+    color: #000;
+    box-shadow: 0 0 20px var(--neon-green) inset, 0 0 40px var(--neon-green);
+}
+
+/* Input Styles */
+.input-cyber {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--neon-green);
+    color: var(--neon-green);
+    padding: 15px;
+    font-size: 1.1rem;
+    font-family: var(--font-main);
+    width: 100%;
+    max-width: 300px;
+    outline: none;
+    box-shadow: 0 0 5px var(--neon-green);
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.input-cyber::placeholder {
+    color: rgba(0, 255, 65, 0.5);
+}
+
+.input-cyber:focus {
+    box-shadow: 0 0 15px var(--neon-green);
+}
