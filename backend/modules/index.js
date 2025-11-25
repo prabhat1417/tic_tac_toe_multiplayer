@@ -1,6 +1,3 @@
-const SYSTEM_ID = "00000000-0000-0000-0000-000000000000";
-const CODE_COLLECTION = "match_codes";
-
 // ======================================================
 // InitModule (REQUIRED)
 // ======================================================
@@ -14,7 +11,7 @@ function InitModule(ctx, logger, nk, initializer) {
             "desc",    // sortOrder: 1 = DESC
             "incr",    // operator: INCREMENT
             "",   // empty string = NEVER reset
-            null    // metadata
+            {}    // metadata must be an object
         );
         logger.info("Leaderboard created (or already exists).");
     } catch (error) {
@@ -34,88 +31,16 @@ function InitModule(ctx, logger, nk, initializer) {
 
     // rpc for creating match
     initializer.registerRpc("create_match", rpcCreateMatch);
-
-    // rpc for finding match by code
-    initializer.registerRpc("get_match_id", rpcGetMatchId);
 }
 
 // ======================================================
 // RPC: Create Match
 // ======================================================
 function rpcCreateMatch(ctx, logger, nk, payload) {
-    let code = "";
-    let attempts = 0;
-    let isUnique = false;
-
-    // Try to generate a unique code
-    while (!isUnique && attempts < 10) {
-        code = Math.floor(1000 + Math.random() * 9000).toString();
-        
-        // Check if this code exists in Storage
-        let objects = nk.storageRead([{
-            collection: CODE_COLLECTION,
-            key: code,
-            userId: SYSTEM_ID
-        }]);
-
-        if (objects.length === 0) {
-            isUnique = true;
-        } else {
-            attempts++;
-        }
-    }
-
-    if (!isUnique) {
-        throw new Error("Failed to generate unique code");
-    }
-
-    // Create the match
-    const matchId = nk.matchCreate("tictactoe", { code: code });
-
-    // Store mapping in Database (Storage)
-    // PermissionRead 2 = Public Read (Anyone can find the code)
-    // PermissionWrite 0 = No Owner Write (Only server can modify)
-    nk.storageWrite([{
-        collection: CODE_COLLECTION,
-        key: code,
-        userId: SYSTEM_ID,
-        value: { matchId: matchId },
-        permissionRead: 2, 
-        permissionWrite: 0 
-    }]);
-
-    logger.info(`Created match ${matchId} with code ${code}`);
-    return JSON.stringify({ matchId, code });
-}
-
-// ======================================================
-// RPC: Get Match ID
-// ======================================================
-function rpcGetMatchId(ctx, logger, nk, payload) {
-    let data = {};
-    try {
-        data = JSON.parse(payload);
-    } catch (e) {}
-
-    const code = data.code || payload;
-
-    if (!code) throw new Error("Code is required");
-
-    // Read from Storage
-    let objects = nk.storageRead([{
-        collection: CODE_COLLECTION,
-        key: code,
-        userId: SYSTEM_ID
-    }]);
-
-    if (objects.length === 0) {
-        throw new Error("Match code not found");
-    }
-
-    // Extract matchId from the stored value
-    const matchId = objects[0].value.matchId;
-    
-    return JSON.stringify({ matchId: matchId });
+    logger.info("create_match RPC called");
+    const matchId = nk.matchCreate("tictactoe", {});
+    logger.info("Created match: " + matchId);
+    return JSON.stringify({ matchId });
 }
 
 // ======================================================
@@ -132,8 +57,7 @@ function matchInit(ctx, logger, nk, params) {
             winner: null, // null, 'X', 'O', or 'draw'
             finished: false,
             finishTick: null,
-            emptyTicks: 0,
-            code: params.code // Store the short code to clean up later
+            emptyTicks: 0
         },
         tickRate: 1, // 1 tick per second is enough for turn-based
         label: "tictactoe"
@@ -294,9 +218,9 @@ function updateStats(nk, logger, players, result) {
 
         userIds.forEach(uid => {
             const player = players[uid];
-
+            
             // 1. Determine Outcome
-            let outcome = 'loss';
+            let outcome = 'loss'; 
             if (result === 'draw') outcome = 'draw';
             else if (result === player.mark) outcome = 'win';
 
@@ -366,19 +290,6 @@ function matchLeave(ctx, logger, nk, dispatcher, tick, state, presence) {
 // Terminate
 // ======================================================
 function matchTerminate(ctx, logger, nk, dispatcher, tick, state, graceSeconds) {
-    // Clean up short code from Storage
-    if (state.code) {
-        try {
-            nk.storageDelete([{
-                collection: CODE_COLLECTION,
-                key: state.code,
-                userId: SYSTEM_ID
-            }]);
-            logger.info(`Cleaned up match code ${state.code} from storage`);
-        } catch(e) {
-            logger.error(`Failed to delete code: ${e}`);
-        }
-    }
     return { state };
 }
 

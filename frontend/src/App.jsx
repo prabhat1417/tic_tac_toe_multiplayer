@@ -113,13 +113,11 @@ function App() {
       const rpcRes = await client.rpc(session, "create_match", {});
       const payload = rpcRes.payload;
       const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
-
       const mId = data.matchId;
-      const mCode = data.code; // Get the short code
 
       const match = await socket.joinMatch(mId);
-      setMatchId(mCode); // Store the CODE for display, not the UUID
-      matchIdRef.current = match.match_id; // Keep UUID for logic if needed, or just rely on socket
+      setMatchId(match.match_id);
+      matchIdRef.current = match.match_id;
 
       // Reset Game State
       setBoard(Array(9).fill(null));
@@ -127,11 +125,17 @@ function App() {
       setPlayerMark(null);
       playerMarkRef.current = null;
 
-      setScreen('game');
+      setScreen('game'); // Directly go to game
 
+      // Add a listener for this specific match join?
+      // The global onmatchpresence handles it if we can access state.
+      // Instead, let's just add a one-off listener or rely on the global one.
+      // We can update the onmatchpresence to check for screen state via ref if needed.
+      // For now, let's assume the user waits.
+      // Actually, let's add a specific check here.
       socket.onmatchpresence = (presence) => {
         if (presence.joins && presence.joins.length > 0) {
-          // setScreen('game');
+          // setScreen('game'); // Already on game
         }
       };
 
@@ -143,15 +147,8 @@ function App() {
   const handleJoinMatch = async (code) => {
     if (!socket) return;
     try {
-      // Resolve code to ID
-      const rpcRes = await client.rpc(session, "get_match_id", { code: code });
-      const payload = rpcRes.payload;
-      const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
-
-      if (!data.matchId) throw new Error("Invalid code");
-
-      const match = await socket.joinMatch(data.matchId);
-      setMatchId(code); // Display the code they joined with
+      const match = await socket.joinMatch(code);
+      setMatchId(match.match_id);
       matchIdRef.current = match.match_id;
 
       // Reset Game State
@@ -163,7 +160,7 @@ function App() {
       setScreen('game');
     } catch (err) {
       console.error("Join failed:", err);
-      alert("Could not join match: " + (err.message || "Unknown error"));
+      alert("Could not join match: " + err.message);
     }
   };
 
