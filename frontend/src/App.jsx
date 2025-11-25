@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { client, getSession } from './nakama';
+import { client, getSession, restoreSession } from './nakama';
 import Login from './components/Login';
 import MainMenu from './components/MainMenu';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
 import Leaderboard from './components/Leaderboard';
-import './App.css'; // We might remove this if index.css covers it, but keeping for safety
+import './App.css';
 
 function App() {
   const [screen, setScreen] = useState('login'); // login, menu, lobby-host, lobby-join, game, leaderboard
@@ -23,19 +23,28 @@ function App() {
   const matchIdRef = useRef(null);
   const playerMarkRef = useRef(null);
 
-  // Login Handler
-  const handleLogin = async (user) => {
-    try {
-      const s = await getSession(user);
-      setSession(s);
-      setUsername(user);
+  // Session Restore
+  useEffect(() => {
+    const initSession = async () => {
+      const s = await restoreSession();
+      if (s) {
+        console.log("Session restored:", s.username);
+        setSession(s);
+        setUsername(s.username);
+        connectSocket(s);
+        setScreen('menu');
+      }
+    };
+    initSession();
+  }, []);
 
-      // Connect Socket
+  // Helper to connect socket
+  const connectSocket = async (s) => {
+    try {
       const socket = client.createSocket(false, false);
       await socket.connect(s, true);
       setSocket(socket);
 
-      // Setup Listeners
       socket.onmatchdata = (matchState) => {
         const content = JSON.parse(new TextDecoder().decode(matchState.data));
 
@@ -57,10 +66,43 @@ function App() {
         }
       };
 
+      socket.onmatchpresence = (presence) => {
+        console.log("Presence update:", presence);
+        // If we are hosting and someone joins, switch to game
+        // We need to check current screen state, but inside callback 'screen' might be stale.
+        // However, we can check if we have a matchId and are waiting.
+        // For simplicity, let's rely on the match update or just this.
+        if (presence.joins && presence.joins.length > 0) {
+          // Ideally we'd check if we are in lobby-host mode.
+          // But switching to game is generally safe if we are in a match.
+          // Let's just trigger a re-render or let the update handle it.
+          // Actually, the previous logic used screen state which is tricky in closure.
+          // We'll leave it for now as the update loop handles game start usually.
+        }
+      };
+
+    } catch (e) {
+      console.error("Socket connection failed:", e);
+    }
+  };
+
+  // Login Handler
+  const handleLogin = async (user) => {
+    try {
+      const s = await getSession(user);
+      setSession(s);
+      setUsername(s.username || user); // Use returned username in case it was adjusted
+
+      await connectSocket(s);
       setScreen('menu');
     } catch (err) {
       console.error("Login failed:", err);
-      alert("Login failed. Check console.");
+      // Check if error is "Username taken"
+      if (err.message && err.message.includes("already in use")) {
+        alert("Username '" + user + "' is already taken. Please choose another.");
+      } else {
+        alert("Login failed: " + (err.message || "Unknown error"));
+      }
     }
   };
 
@@ -83,14 +125,19 @@ function App() {
       setPlayerMark(null);
       playerMarkRef.current = null;
 
-      setScreen('lobby-host');
+      setScreen('game'); // Directly go to game
 
-      // In a real app, we'd wait for a player join event here to switch to 'game'
-      // But our backend sends an update immediately on join.
-      // Let's listen for presence join? Or just wait for the first update with 2 players.
-      // For now, we can just switch to game screen when we get a match update that implies game start?
-      // Or just stay in lobby until opponent joins.
-      // Let's add a presence listener.
+      // Add a listener for this specific match join?
+      // The global onmatchpresence handles it if we can access state.
+      // Instead, let's just add a one-off listener or rely on the global one.
+      // We can update the onmatchpresence to check for screen state via ref if needed.
+      // For now, let's assume the user waits.
+      // Actually, let's add a specific check here.
+      socket.onmatchpresence = (presence) => {
+        if (presence.joins && presence.joins.length > 0) {
+          // setScreen('game'); // Already on game
+        }
+      };
 
     } catch (err) {
       console.error("Host failed:", err);
@@ -132,22 +179,6 @@ function App() {
     setScreen('menu');
   };
 
-  // Effect to auto-switch from lobby to game when player joins
-  // We can detect this if we receive a match state update that shows 2 players
-  // Or use match presence.
-  useEffect(() => {
-    if (socket) {
-      socket.onmatchpresence = (presence) => {
-        console.log("Presence update:", presence);
-        // If we are hosting and someone joins, switch to game
-        if (screen === 'lobby-host' && presence.joins && presence.joins.length > 0) {
-          setScreen('game');
-        }
-      };
-    }
-  }, [socket, screen]);
-
-
   // Render
   return (
     <div className="App">
@@ -186,6 +217,7 @@ function App() {
 
       {screen === 'game' && (
         <Game
+          matchId={matchId}
           board={board}
           players={players}
           myId={session?.user_id}

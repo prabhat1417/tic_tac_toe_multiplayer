@@ -27,13 +27,6 @@ const Leaderboard = ({ session, onBack }) => {
                 <span style={{ fontSize: '1.2rem', color: 'var(--text-grey)' }}>🔍</span>
             </div>
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', marginBottom: '20px', borderBottom: '1px solid #30363d' }}>
-                <div className={`leaderboard-tab ${activeTab === 'weekly' ? 'active' : ''}`} onClick={() => setActiveTab('weekly')}>Weekly</div>
-                <div className={`leaderboard-tab ${activeTab === 'monthly' ? 'active' : ''}`} onClick={() => setActiveTab('monthly')}>Monthly</div>
-                <div className={`leaderboard-tab ${activeTab === 'all' ? 'active' : ''}`} onClick={() => setActiveTab('all')}>All-Time</div>
-            </div>
-
             {/* List */}
             <div style={{ flex: 1, overflowY: 'auto' }}>
                 {records.length === 0 ? (
@@ -65,25 +58,6 @@ const Leaderboard = ({ session, onBack }) => {
                         );
                     })
                 )}
-            </div>
-
-            {/* Current User (Placeholder for now as we don't fetch self rank separately yet) */}
-            <div style={{
-                marginTop: 'auto',
-                padding: '15px',
-                background: 'rgba(189, 0, 255, 0.1)',
-                border: '1px solid var(--primary-purple)',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center'
-            }}>
-                <div className="icon-circle" style={{ background: 'var(--primary-purple)', color: 'white', marginRight: '15px', width: '40px', height: '40px', fontSize: '1rem' }}>
-                    Y
-                </div>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 'bold' }}>You</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-grey)' }}>Wins: ?</div>
-                </div>
             </div>
         </div>
     );

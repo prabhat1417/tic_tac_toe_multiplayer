@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Game = ({ board, players, myId, onMove, myTurn, playerMark, winner, onReset }) => {
+const Game = ({ matchId, board, players, myId, onMove, myTurn, playerMark, winner, onReset }) => {
     // Helper to get player name by mark
     const getPlayerName = (mark) => {
         if (!players) return "Unknown";
@@ -9,13 +9,27 @@ const Game = ({ board, players, myId, onMove, myTurn, playerMark, winner, onRese
         return p.userId === myId ? `${p.username} (You)` : p.username;
     };
 
+    const copyCode = () => {
+        if (matchId) {
+            navigator.clipboard.writeText(matchId);
+            alert("Code copied!");
+        }
+    };
+
     return (
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', position: 'relative' }}>
 
             {/* Header */}
             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', marginTop: '20px' }}>
                 <span style={{ fontSize: '1.5rem', color: 'var(--text-grey)' }}>⚙</span>
-                <h3 style={{ color: 'var(--text-white)' }}>Tic-Tac-Toe: Uplink</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <h3 style={{ color: 'var(--text-white)' }}>Tic-Tac-Toe: Uplink</h3>
+                    {matchId && (
+                        <div onClick={copyCode} style={{ fontSize: '0.8rem', color: 'var(--primary-blue)', cursor: 'pointer', marginTop: '5px' }}>
+                            Code: {matchId.substring(0, 8)}... 📋
+                        </div>
+                    )}
+                </div>
                 <span style={{ fontSize: '1.5rem', opacity: 0 }}>⚙</span>
             </div>
 
