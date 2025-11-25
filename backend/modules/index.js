@@ -158,12 +158,18 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
                         state.finished = true;
                         state.finishTick = tick + 10; // End in 10 secs
 
+                        logger.info("🎮 GAME ENDED - Winner: " + win);
+                        logger.info("🎮 Players in match: " + JSON.stringify(Object.keys(state.players)));
+
                         // Update Stats
                         updateStats(nk, logger, state.players, win);
                     } else if (!state.board.includes(null)) {
                         state.winner = 'draw';
                         state.finished = true;
                         state.finishTick = tick + 10;
+
+                        logger.info("🎮 GAME ENDED - DRAW");
+                        logger.info("🎮 Players in match: " + JSON.stringify(Object.keys(state.players)));
 
                         // Update Stats (Draw)
                         updateStats(nk, logger, state.players, 'draw');
@@ -212,76 +218,51 @@ function updateStats(nk, logger, players, result) {
 
         userIds.forEach(uid => {
             const player = players[uid];
-            let outcome = 'loss';
+            
+            // 1. Determine Outcome
+            let outcome = 'loss'; 
             if (result === 'draw') outcome = 'draw';
             else if (result === player.mark) outcome = 'win';
 
-            logger.info(`Updating stats for ${uid} (${player.username}): ${outcome}`);
+            // 2. Set Deltas
+            // Win  = +1 Score, +0 Subscore
+            // Draw = +0 Score, +1 Subscore
+            // Loss = +0 Score, +0 Subscore (Just updates the record existence/username)
+            let scoreDelta = 0;
+            let subscoreDelta = 0;
 
-            // Read existing stats
-            const storageIds = [{
-                collection: "user_stats",
-                key: "tictactoe",
-                userId: uid
-            }];
-            const objects = nk.storageRead(storageIds);
-
-            let stats = { wins: 0, losses: 0, draws: 0, played: 0 };
-            let version = "";
-
-            if (objects.length > 0) {
-                stats = objects[0].value;
-                version = objects[0].version;
+            if (outcome === 'win') {
+                scoreDelta = 1;
+            } else if (outcome === 'draw') {
+                subscoreDelta = 1;
             }
+            // If outcome is 'loss', both remain 0.
 
-            // Update
-            stats.played++;
-            if (outcome === 'win') stats.wins++;
-            else if (outcome === 'loss') stats.losses++;
-            else stats.draws++;
-
-            // Write back
-            try {
-                nk.storageWrite([{
-                    collection: "user_stats",
-                    key: "tictactoe",
-                    userId: uid,
-                    value: stats,
-                    permissionRead: 1, // Public Read
-                    permissionWrite: 0, // Owner Write (but server can always write)
-                    version: version
-                }]);
-            } catch (e) {
-                logger.error("Storage write failed: " + e);
-            }
-
-            // Update Leaderboard
-            const scoreDelta = outcome === 'win' ? 1 : 0;
-
-            // Ensure we have the latest username (in case player object is stale)
+            // 3. Get Username (for display)
             let username = player.username;
             if (!username || username === "Unknown") {
                 try {
                     const account = nk.accountGetId(uid);
                     username = account.user.username;
                 } catch (e) {
-                    logger.warn("Could not fetch account for username: " + e);
                     username = "Unknown";
                 }
             }
 
-            logger.info(`Writing to leaderboard for ${username}: delta=${scoreDelta} stats=${JSON.stringify(stats)}`);
+            logger.info(`Updating ${username} (${outcome}): score+=${scoreDelta}, subscore+=${subscoreDelta}`);
 
             try {
+                // 4. Write to Leaderboard
+                // Even if deltas are 0, this ensures the player exists on the leaderboard
+                // and their latest username is recorded.
                 nk.leaderboardRecordWrite(
                     "tictactoe_wins",
                     uid,
                     username,
                     scoreDelta,
-                    0,
-                    stats // Metadata
+                    subscoreDelta,
+                    null // No metadata used
                 );
-                logger.info("Leaderboard write successful.");
             } catch (e) {
                 logger.error("Leaderboard write failed: " + e);
             }

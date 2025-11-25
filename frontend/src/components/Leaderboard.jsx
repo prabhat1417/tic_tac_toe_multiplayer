@@ -17,21 +17,6 @@ const Leaderboard = ({ session, onBack }) => {
         fetchLeaderboard();
     }, [session]);
 
-    const getMetadata = (record) => {
-        if (!record.metadata) return { played: 0, wins: 0, losses: 0, draws: 0 };
-        // Metadata is returned as a JSON string usually? Or object? 
-        // Nakama JS client usually returns it as object if it was JSON.
-        // But let's check type.
-        if (typeof record.metadata === 'string') {
-            try {
-                return JSON.parse(record.metadata);
-            } catch (e) {
-                return {};
-            }
-        }
-        return record.metadata;
-    };
-
     const calculateWinRate = (wins, played) => {
         if (!played || played === 0) return "0%";
         return Math.round((wins / played) * 100) + "%";
@@ -64,12 +49,18 @@ const Leaderboard = ({ session, onBack }) => {
                     <div style={{ textAlign: 'center', marginTop: '50px', color: '#666' }}>No records yet...</div>
                 ) : (
                     records.map((record, index) => {
-                        const meta = getMetadata(record);
-                        // Fallback if metadata is empty (e.g. old records)
-                        const played = meta.played || record.score; // Approximation if missing
-                        const wins = meta.wins || record.score;
-                        const losses = meta.losses || 0;
-                        const draws = meta.draws || 0;
+                        // New Logic:
+                        // Score = Wins
+                        // Subscore = Draws
+                        // NumScore = Played
+
+                        const wins = record.score || 0;
+                        const draws = record.subscore || 0;
+                        const played = record.num_score || 0;
+
+                        // Losses = Played - Wins - Draws
+                        // Ensure non-negative (just in case of sync issues, though unlikely)
+                        const losses = Math.max(0, played - wins - draws);
 
                         return (
                             <div key={record.owner_id} style={{ display: 'flex', alignItems: 'center', marginBottom: '15px', fontSize: '0.9rem', borderBottom: '1px solid #222', paddingBottom: '10px' }}>
