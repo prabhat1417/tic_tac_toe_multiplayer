@@ -10,92 +10,76 @@ const Game = ({ board, players, myId, onMove, myTurn, playerMark, winner, onRese
     };
 
     return (
-        <div className="game-screen" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: '20px', alignItems: 'center' }}>
-                <span style={{ fontSize: '1.5rem', color: 'var(--neon-green)' }}>⚙</span>
-                <h2 className="text-neon-pink" style={{ margin: 0, letterSpacing: '2px' }}>CYBER TAC TOE</h2>
-                <span className="text-neon-green" style={{ fontSize: '1.2rem', border: '1px solid var(--neon-green)', padding: '2px 8px', borderRadius: '4px' }}>00:21</span>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', position: 'relative' }}>
+
+            {/* Header */}
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', marginTop: '20px' }}>
+                <span style={{ fontSize: '1.5rem', color: 'var(--text-grey)' }}>⚙</span>
+                <h3 style={{ color: 'var(--text-white)' }}>Tic-Tac-Toe: Uplink</h3>
+                <span style={{ fontSize: '1.5rem', opacity: 0 }}>⚙</span>
             </div>
 
-            <h1 className="text-neon-pink" style={{
-                fontSize: '2rem',
-                marginBottom: '30px',
-                textShadow: '0 0 10px var(--neon-pink)',
-                visibility: winner ? 'hidden' : 'visible'
-            }}>
-                {myTurn ? `YOUR TURN` : "OPPONENT'S TURN"}
-            </h1>
+            {/* Turn Indicator */}
+            <div style={{ marginBottom: '30px', textAlign: 'center' }}>
+                <span style={{ color: myTurn ? 'var(--primary-cyan)' : 'var(--text-grey)', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                    {myTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
+                </span>
+            </div>
 
-            {winner && (
-                <h1 className="text-neon-green" style={{ fontSize: '2rem', marginBottom: '30px', textShadow: '0 0 10px var(--neon-green)' }}>
-                    {winner === 'draw' ? "SYSTEM DRAW" : `WINNER: ${winner}`}
-                </h1>
-            )}
-
-            <div className="board" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 100px)',
-                gridTemplateRows: 'repeat(3, 100px)',
-                gap: '10px',
-                marginBottom: '40px'
-            }}>
+            {/* Board */}
+            <div className="board-grid">
                 {board.map((cell, index) => (
                     <button
                         key={index}
-                        className={`square ${cell ? 'taken' : ''}`}
+                        className={`board-cell ${cell ? cell.toLowerCase() : ''}`}
                         onClick={() => onMove(index)}
                         disabled={!myTurn || cell !== null || winner}
-                        style={{
-                            width: '100px', height: '100px',
-                            background: 'transparent',
-                            border: '2px solid var(--neon-green)',
-                            borderRadius: '4px',
-                            fontSize: '4rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 0 5px var(--neon-green), inset 0 0 5px var(--neon-green)',
-                            cursor: myTurn && !cell && !winner ? 'pointer' : 'default',
-                            color: cell === 'O' ? 'var(--neon-green)' : 'var(--neon-pink)',
-                            textShadow: cell === 'O' ? '0 0 10px var(--neon-green)' : '0 0 10px var(--neon-pink)',
-                        }}
                     >
                         {cell}
                     </button>
                 ))}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '350px', marginBottom: '30px' }}>
-                <div style={{
-                    border: '2px solid var(--neon-pink)',
-                    borderRadius: '8px',
-                    padding: '10px',
-                    width: '45%',
-                    textAlign: 'center',
-                    boxShadow: '0 0 10px var(--neon-pink)'
-                }}>
-                    <p className="text-neon-pink" style={{ margin: '0 0 5px 0', fontSize: '0.8rem' }}>PLAYER X</p>
-                    <p style={{ margin: 0, fontSize: '1.2rem', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {getPlayerName('X')}
-                    </p>
+            {/* Players */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: '40px' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#30363d', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--primary-purple)' }}>X</div>
+                    <span style={{ fontSize: '0.9rem' }}>{getPlayerName('X')}</span>
                 </div>
-
-                <div style={{
-                    border: '2px solid var(--neon-green)',
-                    borderRadius: '8px',
-                    padding: '10px',
-                    width: '45%',
-                    textAlign: 'center',
-                    boxShadow: '0 0 10px var(--neon-green)'
-                }}>
-                    <p className="text-neon-green" style={{ margin: '0 0 5px 0', fontSize: '0.8rem' }}>PLAYER O</p>
-                    <p style={{ margin: 0, fontSize: '1.2rem', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {getPlayerName('O')}
-                    </p>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#30363d', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--primary-cyan)' }}>O</div>
+                    <span style={{ fontSize: '0.9rem' }}>{getPlayerName('O')}</span>
                 </div>
             </div>
 
-            <button className="btn-cyber" onClick={onReset} style={{ width: '100%', maxWidth: '350px' }}>
-                ↻ Reset Game
-            </button>
+            {/* Winner Overlay */}
+            {winner && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(13, 17, 23, 0.95)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10
+                }}>
+                    <h1 style={{ fontSize: '3rem', marginBottom: '40px' }}>
+                        <span style={{ color: winner === 'X' ? 'var(--primary-purple)' : 'var(--primary-cyan)', textShadow: `0 0 20px ${winner === 'X' ? '#bd00ff' : '#00f0ff'}` }}>
+                            {winner === 'draw' ? "DRAW" : winner}
+                        </span>
+                        <span style={{ color: 'white' }}> is the Winner!</span>
+                    </h1>
+
+                    <button className="btn-secondary" onClick={() => window.location.reload()} style={{ marginBottom: '15px' }}>
+                        Main Menu
+                    </button>
+
+                    <button className="btn-primary" onClick={onReset} style={{ background: 'var(--primary-cyan)', color: 'black' }}>
+                        Play Again
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

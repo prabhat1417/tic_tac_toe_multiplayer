@@ -11,40 +11,34 @@ const Login = ({ onLogin }) => {
     };
 
     return (
-        <div className="login-screen" style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            textAlign: 'center'
-        }}>
-            <h1 className="text-neon-pink" style={{ fontSize: '3rem', marginBottom: '2rem' }}>
-                NEON-TAC-TOE
-            </h1>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <h1 style={{ fontSize: '2.5rem', marginBottom: '10px' }}>Tic Tac Toe</h1>
+            <p style={{ color: 'var(--text-grey)', marginBottom: '40px' }}>Choose your Codename</p>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                <label className="text-neon-green" style={{ marginBottom: '10px', alignSelf: 'center', letterSpacing: '2px' }}>
-                    CODENAME
-                </label>
+            <form onSubmit={handleSubmit} style={{ width: '100%' }}>
                 <input
                     type="text"
-                    className="input-cyber"
-                    placeholder="Enter your codename"
+                    className="input-field"
+                    placeholder="Enter Codename"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    style={{ marginBottom: '20px' }}
                 />
 
-                <button type="submit" className="btn-cyber">
-                    ENTER THE MATRIX
+                <button type="submit" className="btn-primary">
+                    Enter
                 </button>
             </form>
 
-            <div style={{ marginTop: '50px', color: '#666' }}>
-                <span style={{ margin: '0 10px' }}>⚙</span>
-                <span style={{ margin: '0 10px' }}>ℹ</span>
-                <p style={{ fontSize: '0.8rem', marginTop: '10px' }}>v1.0.0</p>
-            </div>
+            <div className="divider">Or</div>
+
+            <button className="btn-secondary" style={{ marginBottom: '15px' }} onClick={() => alert("Social login coming soon!")}>
+                <span style={{ fontSize: '1.2rem' }}>G</span> Sign in with Google
+            </button>
+
+            <button className="btn-secondary" onClick={() => alert("Social login coming soon!")}>
+                <span style={{ fontSize: '1.2rem' }}></span> Sign in with Apple
+            </button>
         </div>
     );
 };
