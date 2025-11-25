@@ -6,6 +6,16 @@ A real-time multiplayer Tic-Tac-Toe game with a stunning **Neon/Cyberpunk** aest
 ![React](https://img.shields.io/badge/React-19.2.0-00f3ff?style=for-the-badge&logo=react)
 ![Nakama](https://img.shields.io/badge/Nakama-Backend-00ff41?style=for-the-badge)
 
+## 📸 Screenshots
+
+| Main Menu | Join Game |
+|:---:|:---:|
+| ![Main Menu](screenshots/main_menu.png) | ![Join Game](screenshots/join_screen.png) |
+
+| Gameplay | Winner Screen |
+|:---:|:---:|
+| ![Gameplay](screenshots/gameplay.png) | ![Winner Screen](screenshots/winner_screen.png) |
+
 ## ✨ Features
 
 ### 🎨 **Stunning UI**
