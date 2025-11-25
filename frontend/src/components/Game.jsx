@@ -25,8 +25,8 @@ const Game = ({ matchId, board, players, myId, onMove, myTurn, playerMark, winne
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <h3 style={{ color: 'var(--text-white)' }}>Tic-Tac-Toe: Uplink</h3>
                     {matchId && (
-                        <div onClick={copyCode} style={{ fontSize: '0.8rem', color: 'var(--primary-blue)', cursor: 'pointer', marginTop: '5px' }}>
-                            Code: {matchId.substring(0, 8)}... 📋
+                        <div onClick={copyCode} style={{ fontSize: '1.2rem', color: 'var(--primary-blue)', cursor: 'pointer', marginTop: '5px', fontWeight: 'bold' }}>
+                            Code: {matchId} 📋
                         </div>
                     )}
                 </div>
