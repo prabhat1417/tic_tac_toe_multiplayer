@@ -8,9 +8,9 @@ A real-time multiplayer Tic-Tac-Toe game with a stunning **Neon/Cyberpunk** aest
 
 ## 📸 Screenshots
 
-| Main Menu | Join Game |
-|:---:|:---:|
-| ![Main Menu](screenshots/main_menu.png) | ![Join Game](screenshots/join_screen.png) |
+| Login Screen | Main Menu | Join Game |
+|:---:|:---:|:---:|
+| ![Login Screen](screenshots/login_screen.png) | ![Main Menu](screenshots/main_menu.png) | ![Join Game](screenshots/join_screen.png) |
 
 | Gameplay | Winner Screen |
 |:---:|:---:|
